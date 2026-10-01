@@ -32,3 +32,41 @@ test("classe un dossier sourcé", async () => { const provider = createFakeProvi
     "origine": "donnée synthétique"
   }
 }, provider); assert.equal(result.decision, "inconsistent"); assert.equal(result.review, false); });
+
+const dossierÀRevoir = {
+  "id": "revue-1",
+  "text": "La carte et deux mesures ponctuelles divergent, sans information suffisante sur les terminaux ni les conditions de mesure.",
+  "source": {
+    "url": "https://example.test/dossier-ambigu",
+    "date": "2026-09-20"
+  },
+  "details": {
+    "origine": "donnée synthétique",
+    "signal": "informations incomplètes"
+  }
+};
+
+test("marque une décision incertaine pour revue humaine", async () => {
+  const provider = createFakeProvider(() => ({
+    model: "jev-1.13.0",
+    answers: {
+      decision: {
+        type: "choice",
+        choice: "uncertain",
+        probabilities: {
+          consistent: 0.15,
+          uncertain: 0.55,
+          inconsistent: 0.15,
+          no_service: 0.15,
+        },
+        confidence: 0.62,
+      },
+    },
+    usage: { input_tokens: 10, output_tokens: 0 },
+  }));
+  const résultat = await assessMobileCoverageClaim(dossierÀRevoir, provider);
+  assert.equal(résultat.decision, "uncertain");
+  assert.equal(résultat.review, true);
+  assert.equal(résultat.confidence, 0.62);
+  assert.equal(provider.calls, 1);
+});
